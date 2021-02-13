@@ -1,4 +1,5 @@
-<h1 align="center"> Person_reID_baseline_pytorch </h1>
+<h1 align="center"> Pytorch ReID </h1>
+<h2 align="center"> Strong, Small, Friendly </h2>
 
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/layumi/Person_reID_baseline_pytorch.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/layumi/Person_reID_baseline_pytorch/context:python)
 [![Build Status](https://travis-ci.org/layumi/Person_reID_baseline_pytorch.svg?branch=master)](https://travis-ci.org/layumi/Person_reID_baseline_pytorch)
@@ -32,14 +33,16 @@ Besides, if you are new to person re-ID, you may check out our **[Tutorial](http
 
 ## Features
 Now we have supported:
+- Circle Loss (**CVPR 2020 Oral**)
 - Float16 to save GPU memory based on [apex](https://github.com/NVIDIA/apex)
 - Part-based Convolutional Baseline(PCB)
 - Multiple Query Evaluation
-- Re-Ranking
+- Re-Ranking ([GPU Version](https://github.com/layumi/Person_reID_baseline_pytorch/tree/master/GPU-Re-Ranking))
 - Random Erasing
 - ResNet/DenseNet
 - Visualize Training Curves
 - Visualize Ranking Result
+- [Visualize Heatmap](https://github.com/layumi/Person_reID_baseline_pytorch/blob/dev/visual_heatmap.py)
 - Linear Warm-up 
 
 Here we provide hyperparameters and architectures, that were used to generate the result. 
@@ -50,6 +53,16 @@ You may refer to [Here](https://github.com/layumi/Person_reID_baseline_matconvne
 Different framework need to be tuned in a different way.
 
 ## Some News
+**5 Feb 2021** We have supported [Circle loss](https://arxiv.org/abs/2002.10857)(CVPR20 Oral). You can try it by simply adding `--circle`.  
+
+**11 January 2021** On the Market-1501 dataset, we accelerate the re-ranking processing from **89.2s** to **9.4ms** with one K40m GPU, facilitating the real-time post-processing. The pytorch implementation can be found in [GPU-Re-Ranking](GPU-Re-Ranking/).
+
+**11 June 2020** People live in the 3D world. We release one new person re-id code [Person Re-identification in the 3D Space](https://github.com/layumi/person-reid-3d), which conduct representation learning in the 3D space. You are welcomed to check out it.
+
+**30 April 2020** We have applied this code to the [AICity Challenge 2020](https://www.aicitychallenge.org/),  yielding the 1st Place Submission to the re-id track :red_car:. Check out [here](https://github.com/layumi/AICIty-reID-2020).
+
+**01 March 2020** We release one new image retrieval dataset, called [University-1652](https://github.com/layumi/University1652-Baseline), for drone-view target localization and drone navigation :helicopter:. It has a similar setting with the person re-ID. You are welcomed to check out it.
+
 **07 July 2019:** I added some new functions, such as `--resume`, auto-augmentation policy, acos loss, into [developing thread](https://github.com/layumi/Person_reID_baseline_pytorch/tree/dev) and rewrite the `save` and `load` functions. I haven't tested the functions throughly. Some new functions are worthy of having a try. If you are first to this repo, I suggest you stay with the master thread.
 
 **01 July 2019:** [My CVPR19 Paper](https://arxiv.org/abs/1904.07223) is online. It is based on this baseline repo as teacher model to provide pseudo label for the generated images to train a better student model. You are welcomed to check out the opensource code at [here](https://github.com/NVlabs/DG-Net).
@@ -106,9 +119,11 @@ The download link is [Here](https://drive.google.com/open?id=1XVEYb0TN2SbBYOqf8S
 | -------- | ----- | ---- | ---- |
 | [ResNet-50] | 88.84% | 71.59% |  `python train.py --train_all` |
 | [DenseNet-121] | 90.17% | 74.02% | `python train.py --name ft_net_dense --use_dense --train_all` |
+| [DenseNet-121 (Circle)] | 91.00% | 76.54% | `python train.py --name ft_net_dense_circle_w5 --circle --use_dense --train_all --warm_epoch 5` |
 | [PCB] | 92.64% | 77.47% | `python train.py --name PCB --PCB --train_all --lr 0.02` |
 | [ResNet-50 (fp16)] | 88.03% | 71.40% | `python train.py --name fp16 --fp16 --train_all` |
 | [ResNet-50 (all tricks)] | 91.83% | 78.32% | `python train.py --warm_epoch 5 --stride 1 --erasing_p 0.5 --batchsize 8 --lr 0.02 --name warm5_s1_b8_lr2_p0.5` |
+| [ResNet-50 (all tricks+Circle)] | 92.13% | 79.84% | `python train.py --warm_epoch 5 --stride 1 --erasing_p 0.5 --batchsize 8 --lr 0.02 --name warm5_s1_b8_lr2_p0.5_circle  --circle` |
 
 ### Model Structure
 You may learn more from `model.py`. 
@@ -146,7 +161,7 @@ Because pytorch and torchvision are ongoing projects.
 Here we noted that our code is tested based on Pytorch 0.3.0/0.4.0/0.5.0/1.0.0 and Torchvision 0.2.0/0.2.1 .
 
 ### Dataset & Preparation
-Download [Market1501 Dataset](http://www.liangzheng.com.cn/Project/project_reid.html)
+Download [Market1501 Dataset](http://www.liangzheng.com.cn/Project/project_reid.html) [[Google]](https://drive.google.com/file/d/0B8-rUzbwVRk0c054eEozWG9COHM/view) [[Baidu]](https://pan.baidu.com/s/1ntIi2Op)
 
 Preparation: Put the images with the same id in one folder. You may use 
 ```bash
@@ -154,7 +169,7 @@ python prepare.py
 ```
 Remember to change the dataset path to your own path.
 
-Futhermore, you also can test our code on [DukeMTMC-reID Dataset](https://github.com/layumi/DukeMTMC-reID_evaluation).
+Futhermore, you also can test our code on [DukeMTMC-reID Dataset]( [GoogleDriver](https://drive.google.com/open?id=1jjE85dRCMOgRtvJ5RQV9-Afs-2_5dY3O) or ([BaiduYun](https://pan.baidu.com/s/1jS0XM7Var5nQGcbf9xUztw) password: bhbh)).
 Our baseline code is not such high on DukeMTMC-reID **Rank@1=64.23%, mAP=43.92%**. Hyperparameters are need to be tuned.
 
 ### Train
@@ -222,7 +237,17 @@ https://github.com/layumi/Person_reID_baseline_pytorch/issues/107 (Sorry. It is 
 
 
 ## Citation
-As far as I know, the following papers may be the first two to use the bottleneck baseline. You may cite them in your paper.
+The following paper uses and reports the result of the baseline model. You may cite it in your paper.
+```
+@article{zheng2019joint,
+  title={Joint discriminative and generative learning for person re-identification},
+  author={Zheng, Zhedong and Yang, Xiaodong and Yu, Zhiding and Zheng, Liang and Yang, Yi and Kautz, Jan},
+  journal={IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2019}
+}
+```
+
+The following papers may be the first two to use the bottleneck baseline. You may cite them in your paper.
 ```
 @article{DBLP:journals/corr/SunZDW17,
   author    = {Yifan Sun and
@@ -242,9 +267,31 @@ As far as I know, the following papers may be the first two to use the bottlenec
 }
 ```
 
+Basic Model
+```
+@article{zheng2018discriminatively,
+  title={A discriminatively learned CNN embedding for person reidentification},
+  author={Zheng, Zhedong and Zheng, Liang and Yang, Yi},
+  journal={ACM Transactions on Multimedia Computing, Communications, and Applications (TOMM)},
+  volume={14},
+  number={1},
+  pages={13},
+  year={2018},
+  publisher={ACM}
+}
+
+@article{zheng2020vehiclenet,
+  title={VehicleNet: Learning Robust Visual Representation for Vehicle Re-identification},
+  author={Zheng, Zhedong and Ruan, Tao and Wei, Yunchao and Yang, Yi and Mei, Tao},
+  journal={IEEE Transaction on Multimedia (TMM)},
+  year={2020}
+}
+```
+
 ## Related Repos
 1. [Pedestrian Alignment Network](https://github.com/layumi/Pedestrian_Alignment) ![GitHub stars](https://img.shields.io/github/stars/layumi/Pedestrian_Alignment.svg?style=flat&label=Star)
 2. [2stream Person re-ID](https://github.com/layumi/2016_person_re-ID) ![GitHub stars](https://img.shields.io/github/stars/layumi/2016_person_re-ID.svg?style=flat&label=Star)
 3. [Pedestrian GAN](https://github.com/layumi/Person-reID_GAN) ![GitHub stars](https://img.shields.io/github/stars/layumi/Person-reID_GAN.svg?style=flat&label=Star)
 4. [Language Person Search](https://github.com/layumi/Image-Text-Embedding) ![GitHub stars](https://img.shields.io/github/stars/layumi/Image-Text-Embedding.svg?style=flat&label=Star)
 5. [DG-Net](https://github.com/NVlabs/DG-Net) ![GitHub stars](https://img.shields.io/github/stars/NVlabs/DG-Net.svg?style=flat&label=Star)
+6. [3D Person re-ID](https://github.com/layumi/person-reid-3d) ![GitHub stars](https://img.shields.io/github/stars/layumi/person-reid-3d.svg?style=flat&label=Star)

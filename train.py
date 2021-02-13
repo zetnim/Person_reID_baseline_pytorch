@@ -21,6 +21,7 @@ from random_erasing import RandomErasing
 import yaml
 import math
 from shutil import copyfile
+from circle_loss import CircleLoss, convert_label_to_similarity
 
 version =  torch.__version__
 #fp16
@@ -47,6 +48,7 @@ parser.add_argument('--warm_epoch', default=0, type=int, help='the first K epoch
 parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
 parser.add_argument('--droprate', default=0.5, type=float, help='drop rate')
 parser.add_argument('--PCB', action='store_true', help='use PCB+ResNet50' )
+parser.add_argument('--circle', action='store_true', help='use Circle loss' )
 parser.add_argument('--fp16', action='store_true', help='use float16 instead of float32, which will save about 50% memory' )
 opt = parser.parse_args()
 
@@ -159,7 +161,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     #best_acc = 0.0
     warm_up = 0.1 # We start from the 0.1*lrRate
     warm_iteration = round(dataset_sizes['train']/opt.batchsize)*opt.warm_epoch # first 5 epoch
-
+    if opt.circle:
+        criterion_circle = CircleLoss(m=0.25, gamma=32)
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
@@ -202,12 +205,20 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                 else:
                     outputs = model(inputs)
 
-                if not opt.PCB:
+                sm = nn.Softmax(dim=1)
+                if opt.circle: 
+                    logits, ff = outputs
+                    fnorm = torch.norm(ff, p=2, dim=1, keepdim=True)
+                    ff = ff.div(fnorm.expand_as(ff))
+                    loss = criterion(logits, labels) + criterion_circle(*convert_label_to_similarity( ff, labels))/now_batch_size
+                    #loss = criterion_circle(*convert_label_to_similarity( ff, labels))
+                    _, preds = torch.max(logits.data, 1)
+
+                elif not opt.PCB:  #  norm
                     _, preds = torch.max(outputs.data, 1)
                     loss = criterion(outputs, labels)
-                else:
+                else: # PCB
                     part = {}
-                    sm = nn.Softmax(dim=1)
                     num_part = 6
                     for i in range(num_part):
                         part[i] = outputs[i]
@@ -222,7 +233,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                 # backward + optimize only if in training phase
                 if epoch<opt.warm_epoch and phase == 'train': 
                     warm_up = min(1.0, warm_up + 0.9 / warm_iteration)
-                    loss *= warm_up
+                    loss = loss*warm_up
 
                 if phase == 'train':
                     if fp16: # we use optimier to backward loss
@@ -307,11 +318,11 @@ def save_network(network, epoch_label):
 #
 
 if opt.use_dense:
-    model = ft_net_dense(len(class_names), opt.droprate)
+    model = ft_net_dense(len(class_names), opt.droprate, circle = opt.circle)
 elif opt.use_NAS:
     model = ft_net_NAS(len(class_names), opt.droprate)
 else:
-    model = ft_net(len(class_names), opt.droprate, opt.stride)
+    model = ft_net(len(class_names), opt.droprate, opt.stride, circle =opt.circle)
 
 if opt.PCB:
     model = PCB(len(class_names))
